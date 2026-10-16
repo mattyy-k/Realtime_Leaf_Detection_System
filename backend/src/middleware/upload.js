@@ -21,7 +21,8 @@ const upload = multer({
       return cb(error, false);
     }
 
-    // Additional check: verify extension matches MIME type
+    // Additional check: verify extension matches MIME (Multipurpose Internet
+    // Mail Extension) type
     const ext = path.extname(file.originalname).toLowerCase();
     const validExtensions = ['.jpg', '.jpeg', '.png'];
     if (!validExtensions.includes(ext)) {

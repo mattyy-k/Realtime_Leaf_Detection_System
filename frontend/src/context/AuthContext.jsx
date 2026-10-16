@@ -3,11 +3,13 @@ createContext,
 useContext,
 useState,
 useEffect,
+useCallback,
 } from 'react';
 
 import api from '../api/axios';
 
 const AuthContext = createContext(null);
+const INACTIVITY_TIMEOUT_MS = 30 * 1000;
 
 export const useAuth = () => {
 const context = useContext(AuthContext);
@@ -26,6 +28,19 @@ export const AuthProvider = ({ children }) => {
 const [user, setUser] = useState(null);
 const [token, setToken] = useState(null);
 const [loading, setLoading] = useState(true);
+
+const logout = useCallback(() => {
+setToken(null);
+setUser(null);
+
+localStorage.removeItem(
+  'token'
+);
+
+localStorage.removeItem(
+  'user'
+);
+}, []);
 
 // Restore authentication after page refresh
 useEffect(() => {
@@ -60,6 +75,45 @@ if (storedToken && storedUser) {
 setLoading(false);
 
 }, []);
+
+// End authenticated sessions after 30 seconds without browser activity.
+useEffect(() => {
+if (!token) {
+  return undefined;
+}
+
+let timeoutId;
+
+const handleActivity = () => {
+  window.clearTimeout(timeoutId);
+  timeoutId = window.setTimeout(() => {
+    logout();
+    window.location.replace('/login');
+  }, INACTIVITY_TIMEOUT_MS);
+};
+
+const activityEvents = [
+  'mousedown',
+  'mousemove',
+  'keydown',
+  'scroll',
+  'touchstart',
+  'pointerdown',
+];
+
+activityEvents.forEach((eventName) => {
+  window.addEventListener(eventName, handleActivity, { passive: true });
+});
+
+handleActivity();
+
+return () => {
+  window.clearTimeout(timeoutId);
+  activityEvents.forEach((eventName) => {
+    window.removeEventListener(eventName, handleActivity);
+  });
+};
+}, [token, logout]);
 
 /**
 
@@ -189,6 +243,7 @@ return response.data;
 
 };
 
+<<<<<<< Updated upstream
 /**
 
 LOGOUT
@@ -236,6 +291,8 @@ const reactivateAccount = async (email, password) => {
   return response.data;
 };
 
+=======
+>>>>>>> Stashed changes
 const value = {
 
 user,

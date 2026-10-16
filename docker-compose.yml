@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MongoDB Database
   mongodb:
@@ -12,6 +10,11 @@ services:
       - mongodb_data:/data/db
     environment:
       - MONGO_INITDB_DATABASE=leaf_detection
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   # Express.js Backend
   backend:
@@ -30,9 +33,14 @@ services:
       - JWT_EXPIRES_IN=1h
       - AI_SERVICE_URL=http://ai-service:8000
       - MAX_FILE_SIZE=5242880
+      # Local demonstration mode: print OTPs to backend logs instead of requiring SMTP.
+      # Remove this line and provide SMTP_* variables for real email delivery.
+      - DEV_EMAIL_MODE=console
     depends_on:
-      - mongodb
-      - ai-service
+      mongodb:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
 
   # FastAPI AI Service
   ai-service:
@@ -47,6 +55,11 @@ services:
       - DETECTION_CONF=0.5
     volumes:
       - ./ai-service/models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
     # Uncomment for GPU support:
     # deploy:
     #   resources:
@@ -66,7 +79,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
 
 volumes:
   mongodb_data:
